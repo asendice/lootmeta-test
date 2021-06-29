@@ -1,19 +1,35 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-//access token: USLkLUzmuKtQ8jto5E9v6tTokDVSLWK7cc
-
 const App = () => {
   const [items, setItems] = useState([]);
   const [term, setTerm] = useState("");
+  const [token, setToken] = useState("");
 
-  // get all of the wow items - literally all of them
+  // get access token for blizzard oauth system
+  const getAccessToken = async () => {
+    await axios
+      .post(
+        "https://us.battle.net/oauth/token?client_id=671a1880e85841e7aab1639773b1cbe5&client_secret=8KLwCy4b6UklRasHD4PTZih5k0jlLxGw&grant_type=client_credentials"
+      )
+      .then((res) => {
+        setToken(res.data.access_token);
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  };
+  useEffect(() => {
+    getAccessToken();
+  }, []);
+
+  // get all of the wow items based on search term
   const getItems = async () => {
     let arrOfItems = [];
 
     await axios
       .get(
-        `https://us.api.blizzard.com/data/wow/search/item?namespace=static-us&name.en_US=${term}&orderby=id&_page=1&access_token=USLkLUzmuKtQ8jto5E9v6tTokDVSLWK7cc`
+        `https://us.api.blizzard.com/data/wow/search/item?namespace=static-us&name.en_US=${term}&orderby=id&_page=1&access_token=${token}`
       )
       .then((res) => {
         arrOfItems.push(res.data.results);
@@ -54,15 +70,20 @@ const App = () => {
 
   const renderNamesOfItems = () => {
     if (items.length > 0) {
-      return items.flat().map((item) => {
-        return (
-          <div key={item.data.id} style={{ border: "solid black 2px" }}>
-            <div>{item.data.name.en_US}</div>
-            <div>{item.data.quality.type}</div>
-            <div>{item.data.item_subclass.name.en_US}</div>
-          </div>
-        );
-      });
+      return (
+        items
+          .flat()
+          // .filter((x) => x.name.en_US === term)
+          .map((item) => {
+            return (
+              <div key={item.data.id} style={{ border: "solid black 2px" }}>
+                <div>{item.data.name.en_US}</div>
+                <div>{item.data.quality.type}</div>
+                <div>{item.data.item_subclass.name.en_US}</div>
+              </div>
+            );
+          })
+      );
     }
   };
 
