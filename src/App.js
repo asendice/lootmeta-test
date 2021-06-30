@@ -5,6 +5,7 @@ const App = () => {
   const [items, setItems] = useState([]);
   const [term, setTerm] = useState("");
   const [token, setToken] = useState("");
+  const [media, setMedia] = useState([]);
 
   // get access token for blizzard oauth system
   const getAccessToken = async () => {
@@ -23,67 +24,104 @@ const App = () => {
     getAccessToken();
   }, []);
 
+  // getting item images
+  const getItemImages = async (id) => {
+    console.log("getItemImages, has been called ");
+    let arr = [];
+    if (id.length <= 1) {
+      await axios
+        .get(
+          `https://us.api.blizzard.com/data/wow/media/item/${id[0]}?namespace=static-classic-us&locale=en_US&access_token=${token}
+        `
+        )
+        .then((res) => {
+          let obj = {
+            image: res.data.assets[0].value,
+            id: res.data.id,
+          };
+          arr.push(obj);
+          setMedia(arr);
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+    } else {
+      for (let i = 0; i < id.length - 1; i++) {
+        console.log("getItemImages for loop has been initiated");
+        await axios
+          .get(
+            `https://us.api.blizzard.com/data/wow/media/item/${id[i]}?namespace=static-classic-us&locale=en_US&access_token=${token}
+            `
+          )
+          .then((res) => {
+            let obj = {
+              image: res.data.assets[0].value,
+              id: res.data.id,
+            };
+            arr.push(obj);
+            setMedia(arr);
+          })
+          .catch((err) => {
+            console.error(err);
+          });
+      }
+      console.log(arr, "arr");
+    }
+  };
+  const filteredItems = items.flat().filter((item) => {
+    return item.data.name.en_US.toLowerCase().includes(term.toLowerCase());
+  });
+
   // get all of the wow items based on search term
   const getItems = async () => {
     let arrOfItems = [];
-
     await axios
       .get(
-        `https://us.api.blizzard.com/data/wow/search/item?namespace=static-us&name.en_US=${term}&orderby=id&_page=1&access_token=${token}`
+        `https://us.api.blizzard.com/data/wow/search/item?namespace=static-us&name.en_US=${term}&orderby=field1&_pageSize=1000&_maxPageSize=1000&access_token=${token}`
       )
       .then((res) => {
         arrOfItems.push(res.data.results);
+        const ids = filteredItems.map((x) => {
+          return x.data.id;
+        });
+        getItemImages(ids);
+        setItems(arrOfItems);
       })
+
       .catch((err) => {
         console.error(err);
       });
-    setItems(arrOfItems);
   };
 
-  // getting item images
-  // const getItemImages = async () => {
-  //   let arrOfItems = [];
-  //   const itemIds = items.map((item) => {
-  //     return item.data.id;
-  //   });
-  //   console.log(itemIds, "itemIds");
-  //   for (let i = 0; i < itemIds.length - 1; i++) {
-  //     await axios
-  //       .get(
-  //         `https://us.api.blizzard.com/data/wow/media/item/${itemIds[i]}?namespace=static-classic-us&locale=en_US&access_token=USLkLUzmuKtQ8jto5E9v6tTokDVSLWK7cc`
-  //       )
-  //       .then((res) => {
-  //         arrOfItems.push(res.data.results);
-  //       })
-  //       .catch((err) => {
-  //         console.error(err);
-  //       });
-  //   }
-  //   setItemMedia(arrOfItems.flat());
-  // };
+  const mergedArray = filteredItems.map((item, i) => {
+    if (media.length > 0 && item.data.id === media[i].id) {
+      return Object.assign({}, item, media[i]);
+    }
+  });
+  console.log(media, "media");
+  console.log(mergedArray, "mergedArray");
 
   const submitSearch = () => {
     getItems();
   };
 
-  console.log(items);
-
   const renderNamesOfItems = () => {
-    if (items.length > 0) {
-      return (
-        items
-          .flat()
-          // .filter((x) => x.name.en_US === term)
-          .map((item) => {
-            return (
-              <div key={item.data.id} style={{ border: "solid black 2px" }}>
-                <div>{item.data.name.en_US}</div>
-                <div>{item.data.quality.type}</div>
-                <div>{item.data.item_subclass.name.en_US}</div>
-              </div>
-            );
-          })
-      );
+    if (mergedArray.length > 0) {
+      return mergedArray.map((item) => {
+        return (
+          <div>
+            dsfj
+            {/* <div key={item.data.id} style={{ border: "solid black 1px" }}>
+              <img src={item.image} />
+
+              <div>{item.data.name.en_US}</div>
+              <div>{item.data.quality.type}</div>
+              <div>{item.data.item_subclass.name.en_US}</div>
+              <div>{item.data.id}</div>
+            </div> */}
+          </div>
+        );
+      });
     }
   };
 
