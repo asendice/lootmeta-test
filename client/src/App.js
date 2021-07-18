@@ -4,8 +4,11 @@ import axios from "axios";
 const App = () => {
   const [items, setItems] = useState([]);
   const [term, setTerm] = useState("");
+  const [submittedTerm, setSubmittedTerm] = useState("");
   const [token, setToken] = useState("");
   const [media, setMedia] = useState([]);
+
+  console.log(items, "items");
 
   // get access token for blizzard oauth system
   const getAccessToken = async () => {
@@ -24,9 +27,10 @@ const App = () => {
     getAccessToken();
   }, []);
 
+  
+
   // getting item images
-  const getItemImages = async (id) => {
-    console.log("getItemImages, has been called ");
+  const getMedia = async (id) => {
     let arr = [];
     if (id.length <= 1) {
       await axios
@@ -47,7 +51,6 @@ const App = () => {
         });
     } else {
       for (let i = 0; i < id.length - 1; i++) {
-        console.log("getItemImages for loop has been initiated");
         await axios
           .get(
             `https://us.api.blizzard.com/data/wow/media/item/${id[i]}?namespace=static-classic-us&locale=en_US&access_token=${token}
@@ -65,11 +68,12 @@ const App = () => {
             console.error(err);
           });
       }
-      console.log(arr, "arr");
     }
   };
   const filteredItems = items.flat().filter((item) => {
-    return item.data.name.en_US.toLowerCase().includes(term.toLowerCase());
+    return item.data.name.en_US
+      .toLowerCase()
+      .includes(submittedTerm.toLowerCase());
   });
 
   // get all of the wow items based on search term
@@ -77,51 +81,68 @@ const App = () => {
     let arrOfItems = [];
     await axios
       .get(
-        `https://us.api.blizzard.com/data/wow/search/item?namespace=static-us&name.en_US=${term}&orderby=field1&_pageSize=1000&_maxPageSize=1000&access_token=${token}`
+        `https://us.api.blizzard.com/data/wow/search/item?namespace=static-us&name.en_US=${submittedTerm}&orderby=field1&_pageSize=1000&_maxPageSize=1000&access_token=${token}`
       )
       .then((res) => {
         arrOfItems.push(res.data.results);
-        const ids = filteredItems.map((x) => {
-          return x.data.id;
-        });
-        getItemImages(ids);
         setItems(arrOfItems);
       })
-
+      .then(() => {})
       .catch((err) => {
         console.error(err);
       });
   };
 
+  console.log(filteredItems, "filteredItems");
+  console.log(media, "media");
+
   const mergedArray = filteredItems.map((item, i) => {
-    if (media.length > 0 && item.data.id === media[i].id) {
+    if (media.length > 0) {
       return Object.assign({}, item, media[i]);
     }
   });
-  console.log(media, "media");
-  console.log(mergedArray, "mergedArray");
 
   const submitSearch = () => {
     getItems();
+    setSubmittedTerm(term);
   };
 
+  useEffect(() => {
+    console.log("useEffect de")
+    if (filteredItems.length > 0 && media.length < 1) {
+      const idsArr = filteredItems.map((item) => {
+        console.log(item, "item in map func");
+        return item.data.media.id;
+      });
+      getMedia(idsArr);
+    }
+  }, [submittedTerm]);
+
+  if (filteredItems.length > 0 ljhfwef) {
+    const idsArr = filteredItems.map((item) => {
+      console.log(item, "item in map func");
+      return item.data.media.id;
+    });
+    getMedia(idsArr);
+  }
+
   const renderNamesOfItems = () => {
-    if (mergedArray.length > 0) {
+    if (media.length > 0) {
       return mergedArray.map((item) => {
         return (
-          <div>
-            dsfj
-            {/* <div key={item.data.id} style={{ border: "solid black 1px" }}>
+          <div key={item.data.id}>
+            <div style={{ border: "solid black 1px" }}>
               <img src={item.image} />
-
               <div>{item.data.name.en_US}</div>
               <div>{item.data.quality.type}</div>
               <div>{item.data.item_subclass.name.en_US}</div>
               <div>{item.data.id}</div>
-            </div> */}
+            </div>
           </div>
         );
       });
+    } else {
+      <div>No results</div>;
     }
   };
 
